@@ -45,7 +45,7 @@ node test-completion.cjs
 
 | ファイル | 内容 |
 | --- | --- |
-| `build-wasm.py` / `engine.wasm` | 13個の数値演算カーネルを直接 WASM バイナリとして生成 |
+| `build-wasm.py` | 13個の数値演算カーネルを直接 WASM バイナリとして生成 |
 | `engine.js` | Transformer、逆伝播、Adam の実行・メモリー管理 |
 | `train-worker.js` | ミニバッチ学習、評価、チェックポイント復元 |
 | `decoder.js` / `beam.js` / `infer-worker.js` | 可視化用の推論と生成候補5件の探索 |

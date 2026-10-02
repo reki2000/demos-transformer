@@ -55,7 +55,7 @@ The page tests are not a substitute for checking the appearance in real browsers
 
 | File | Description |
 | --- | --- |
-| `build-wasm.py` / `engine.wasm` | Emits the 13 numeric kernels directly as a WASM binary |
+| `build-wasm.py` | Emits the 13 numeric kernels directly as `engine.wasm` (build output, git-ignored) |
 | `engine.js` | Transformer forward/backward, Adam, memory management |
 | `train-worker.js` | Mini-batch training, evaluation, checkpoint restore |
 | `decoder.js` / `beam.js` / `infer-worker.js` | Inference for visualization and search for 5 candidate generations |

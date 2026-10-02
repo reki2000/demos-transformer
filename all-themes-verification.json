@@ -1,0 +1,16 @@
+{
+  "split": "within-scene-upper-middle-grouped",
+  "train": 4286,
+  "evaluation": 714,
+  "evaluationOnlyCharacters": 0,
+  "testedConfig": {
+    "layers": 2,
+    "dimension": 16,
+    "batch": 64,
+    "epochs": 4
+  },
+  "trainLoss": 2.296922943839017,
+  "evaluationLoss": 2.4538265540743476,
+  "completionTest": "passed",
+  "pageWorkerWasmTest": "passed all 15 configurations (DOM simulation)"
+}

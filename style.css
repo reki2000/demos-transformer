@@ -50,3 +50,5 @@ main{grid-template-rows:auto minmax(230px,1fr) 176px 72px}.bottom-panels{grid-te
 #generation-end{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .live-progress{flex:1;min-width:70px}.live-progress progress{width:100%;height:8px;accent-color:var(--mint);display:block}.live-progress>div{display:flex;justify-content:space-between;color:var(--muted);font:10px/1.7 monospace;margin-top:5px}.transport-row>button.primary{min-width:90px}.transport-row #next,.transport-row #reset{white-space:nowrap}.transport-row #fullscreen{margin-left:5px}
 @media(max-width:600px){.live-progress{order:2;flex-basis:100%;margin-top:5px}}
+
+.gh-link{display:flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font:11px monospace}.gh-link:hover{color:var(--text)}.gh-link:focus-visible{outline:2px solid var(--mint);outline-offset:2px}@media(max-width:700px){.gh-link span{display:none}}

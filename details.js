@@ -14,7 +14,7 @@ function renderCellDetails(){
  const {map}=selectedCell,m=matrix(map),row=Math.min(selectedCell.row,m.length-1),col=Math.min(selectedCell.col,m[0].length-1),value=m[row][col],key=map.key,block=map.block;
  selectedCell.row=row;selectedCell.col=col;
  const dim=data.config.dimension,ff=data.config.ff,trace=getDetailTrace(),w=data.snapshots[frame].weights,bt=block===undefined?null:trace.blocks[block],tokens=data.tokens[example],token=tokens[row];
- const isProbability=key==='attention'||key==='probs',isVocabulary=key==='logits'||key==='probs',isAttention=key==='attention';
+ const isProbability=isAttentionKey(key)||key==='probs',isVocabulary=key==='logits'||key==='probs',isAttention=isAttentionKey(key);
  const rowLabel=`位置 ${row}「${visibleToken(token)}」`,colLabel=isAttention?`参照先の位置 ${col}「${visibleToken(tokens[col])}」`:isVocabulary?`候補文字「${data.vocab[col]}」`:`特徴成分 d${col+1}`;
  $('cell-detail-title').textContent=(block===undefined?'':`Block ${block+1} · `)+labels[key][0];
  $('cell-detail-state').textContent=`更新 ${data.snapshots[frame].step} / ${data.config.totalSteps} · 例文「${data.texts[example]}」`;
@@ -44,12 +44,12 @@ function renderCellDetails(){
   meaning+=' このモデルは正規化後の追加の倍率・バイアスを使いません。負の値は誤りではなく、正規化された成分が行平均より小さいことを表します。';
  }else if(['q','k','v'].includes(key)){
   linearDetail(bt.normAttention[row],w[block+key],key.toUpperCase());meaning+=` ${addFeatures} Q・K・Vのセルは確率ではありません。`;
- }else if(key==='attention'){
+ }else if(isAttentionKey(key)){
   meaning=`${rowLabel}が、${colLabel}から情報を受け取る割合です。${(value*100).toFixed(2)}%という値は、Vを混ぜるときの重みを表します。文章全体での「重要度」の絶対評価ではありません。`;
   if(col>row){formula='未来の位置 → 因果マスク → 重み 0';calculation=`参照先 ${col} は現在位置 ${row} より先です。\nこの列はSoftmaxの分母にも含めず、注意の値を0に固定します。`;meaning+=' 斜線は未来の文字を見ないための制限であり、学習によってゼロになったわけではありません。'}
   else{
-   products=bt.q[row].map((v,j)=>({label:'d'+(j+1),input:v,weight:bt.k[col][j],product:v*bt.k[col][j]}));const scale=Math.sqrt(dim),dot=products.reduce((a,b)=>a+b.product,0),scores=bt.k.slice(0,row+1).map(r=>r.reduce((a,k,j)=>a+bt.q[row][j]*k,0)/scale),max=Math.max(...scores),denom=scores.reduce((a,s)=>a+Math.exp(s-max),0),prob=Math.exp(dot/scale-max)/denom;
-   formula=`注意[i,j] = softmax(Q[i] · K[j] / √${dim})　※ j ≤ i のみ`;calculation=`QとKの${dim}成分の内積 = ${detailNumber(dot)}\n√${dim} = ${detailNumber(scale)} で割ったスコア = ${detailNumber(dot/scale)}\nexp(スコア − 最大値) / Σ exp(各スコア − 最大値)\n= ${detailNumber(prob)} = ${(prob*100).toFixed(4)}%`;
+   const heads=data.config.heads||1,dh=dim/heads,o=attentionHead(key)*dh,slice=r=>r.slice(o,o+dh);products=slice(bt.q[row]).map((v,j)=>({label:'d'+(o+j+1),input:v,weight:bt.k[col][o+j],product:v*bt.k[col][o+j]}));const scale=Math.sqrt(dh),dot=products.reduce((a,b)=>a+b.product,0),scores=bt.k.slice(0,row+1).map(r=>slice(r).reduce((a,k,j)=>a+bt.q[row][o+j]*k,0)/scale),max=Math.max(...scores),denom=scores.reduce((a,s)=>a+Math.exp(s-max),0),prob=Math.exp(dot/scale-max)/denom;
+   formula=heads>1?`注意[i,j] = softmax(Q[i] · K[j] / √${dh})　※ ヘッド${attentionHead(key)+1}の成分 d${o+1}〜d${o+dh}、j ≤ i のみ`:`注意[i,j] = softmax(Q[i] · K[j] / √${dh})　※ j ≤ i のみ`;calculation=`QとKの${dh}成分の内積 = ${detailNumber(dot)}\n√${dh} = ${detailNumber(scale)} で割ったスコア = ${detailNumber(dot/scale)}\nexp(スコア − 最大値) / Σ exp(各スコア − 最大値)\n= ${detailNumber(prob)} = ${(prob*100).toFixed(4)}%`;
   }
  }else if(key==='attentionOutput'){
   linearDetail(bt.attentionMixed[row],w[block+'o'],'Attention出力');calculation=`先に各参照先のVを、注意の割合で混ぜます。\n混ぜた${dim}成分をWoで線形変換。\n`+calculation;
@@ -78,7 +78,7 @@ function renderCellDetails(){
  }).join('');$('cell-detail-vector').querySelectorAll('[data-detail-col]').forEach(button=>button.onclick=()=>selectDetailCell(map,row,+button.dataset.detailCol));
  const mean=values.reduce((a,b)=>a+b,0)/values.length;$('cell-detail-stats').textContent=isProbability?`この行の合計 ${(values.reduce((a,b)=>a+b,0)*100).toFixed(2)}%（保存値の丸め差を含む）`:`この行の平均 ${mean.toFixed(4)} ／ 最小 ${Math.min(...values).toFixed(4)} ／ 最大 ${Math.max(...values).toFixed(4)}`;
  $('cell-detail-products').hidden=!products.length;
- $('cell-detail-products-content').innerHTML=products.length?`<table><thead><tr><th>成分</th><th>${key==='attention'?'Q':'入力'}</th><th>${key==='attention'?'K':'重み'}</th><th>積</th></tr></thead><tbody>${products.map(p=>`<tr><th>${p.label}</th><td>${p.input.toFixed(6)}</td><td>${p.weight.toFixed(6)}</td><td>${p.product.toFixed(6)}</td></tr>`).join('')}</tbody></table>`:'';
+ $('cell-detail-products-content').innerHTML=products.length?`<table><thead><tr><th>成分</th><th>${isAttentionKey(key)?'Q':'入力'}</th><th>${isAttentionKey(key)?'K':'重み'}</th><th>積</th></tr></thead><tbody>${products.map(p=>`<tr><th>${p.label}</th><td>${p.input.toFixed(6)}</td><td>${p.weight.toFixed(6)}</td><td>${p.product.toFixed(6)}</td></tr>`).join('')}</tbody></table>`:'';
 }
 $('close-cell-details').onclick=closeDetailPanel;
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('info').open&&selectedCell)closeDetailPanel()});

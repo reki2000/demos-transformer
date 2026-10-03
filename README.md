@@ -45,7 +45,7 @@ node test-completion.cjs
 node test-kvcache.cjs
 ```
 
-- Engine: agreement with an independent JavaScript implementation, numerical
+- Engine (also checks 2 and 4 heads): agreement with an independent JavaScript implementation, numerical
   gradient checks, real training, all 15 configurations.
 - Page: simulated DOM with real Workers and WASM; covers interaction,
   generation, stop and restore.
@@ -100,12 +100,25 @@ is needed. The loss is not comparable with the earlier "unseen theme" split.
 
 ## Configuration
 
-Blocks: 2 / 4 / 6. Dimensions: 8 / 16 / 32 / 48 / 64.
+Blocks: 2 / 4 / 6. Dimensions: 8 / 16 / 32 / 48 / 64. Heads: 1 / 2 / 4 (the
+dimension is split evenly; each head needs at least 4 columns). With several
+heads each block shows one attention map per head. The "mean distance" in each
+block header is how many characters back attention reaches on the shown example.
 Batch size: 8 / 16 / 32 / 64. Changing the configuration resets training.
 Switching the dataset also resets training, since the vocabulary and context
 length change (21 positions for senryu, 128 for SF stories). To regenerate the
 SF stories, run `python3 generate-sf-story.py` and then `python3 package.py`.
 The default learning rate is 0.003 (in `train-worker.js` and `live-loader.js`).
+
+## Experiment: blocks and heads
+
+`experiments/depth-heads.md` compares 2, 4 and 6 blocks with 1 and 4 heads
+(64 dimensions) on the SF stories. To reproduce (10–20 minutes per configuration):
+
+```sh
+node experiments/depth-heads.cjs 4 64 4   # blocks dimensions heads
+python3 experiments/evaluate.py
+```
 
 ## License
 

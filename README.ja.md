@@ -1,7 +1,8 @@
 # 育児川柳 Transformer 学習ラボ（WASM）
 
 ブラウザ内で実際に学習する、小さなデコーダー専用 Transformer の可視化教材です。
-全14テーマを学習に含めた最新版です。外部通信・外部ライブラリは使用しません。
+学習データは画面上部の「データ」で、育児川柳（5,000件）と SF 起承転結掌編（5,000話）から選べます。
+外部通信・外部ライブラリは使用しません。
 
 ## そのまま使う
 
@@ -53,7 +54,8 @@ node test-completion.cjs
 | `live-page.html` / `style.css` | HTML テンプレートと画面のスタイル |
 | `corpus-common.json` | 本文・読み・テーマ・文字語彙・トークン・分割情報を含む5,000件 |
 | `split-all-themes.py` | 全14テーマを含む学習／評価分割を再現 |
-| `generate-sf-story.py` / `corpus-sf.json` | SF起承転結掌編コーパス（試作、画面には未接続）の生成器と生成結果 |
+| `generate-sf-story.py` / `corpus-sf.json` | SF起承転結掌編5,000話の生成器と生成結果 |
+| `datasets.json` | 画面で選べるデータセットの一覧（表示名・説明・CSV名） |
 | `package.py` | 単一HTMLとそのZIPを作成 |
 | `test-*.cjs` | 検証コード |
 
@@ -84,6 +86,8 @@ python3 package.py
 
 ブロック数：2 / 4 / 6。次元数：8 / 16 / 32 / 48 / 64。
 バッチサイズ：8 / 16 / 32 / 64。構成変更では学習を初期化します。
+データセットを切り替えると、語彙と文脈長（川柳21・SF掌編111位置）が変わるため学習を初期化します。
+SF掌編を再生成する場合は `python3 generate-sf-story.py` のあと `python3 package.py` を実行してください。
 学習率は `train-worker.js` と `live-loader.js` の既定値 0.003 です。
 
 このZIPは現在のソース一式です。過去のGit履歴は含みません。

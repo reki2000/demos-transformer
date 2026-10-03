@@ -6,7 +6,8 @@
 
 An interactive visualization of a tiny decoder-only Transformer that is actually
 trained inside your browser. The corpus is a set of senryu (5-7-5 Japanese
-poems) about child-rearing, covering 14 themes. There are no external requests
+poems) about child-rearing, covering 14 themes; a "Data" selector switches to
+5,000 generated four-act SF short stories. There are no external requests
 and no external libraries.
 
 ## Usage
@@ -63,7 +64,8 @@ The page tests are not a substitute for checking the appearance in real browsers
 | `live-page.html` / `style.css` | HTML template and styles |
 | `corpus-common.json` | 5,000 samples with text, readings, themes, character vocabulary, tokens and split info |
 | `split-all-themes.py` | Reproduces the train/eval split covering all 14 themes |
-| `generate-sf-story.py` / `corpus-sf.json` | SF four-act short-story corpus generator and its output (prototype, not yet wired into the page) |
+| `generate-sf-story.py` / `corpus-sf.json` | Generator and output for 5,000 four-act SF short stories |
+| `datasets.json` | Datasets offered in the page (label, description, CSV name) |
 | `package.py` | Builds the single HTML file and its ZIP |
 | `test-*.cjs` | Tests |
 
@@ -97,6 +99,9 @@ is needed. The loss is not comparable with the earlier "unseen theme" split.
 
 Blocks: 2 / 4 / 6. Dimensions: 8 / 16 / 32 / 48 / 64.
 Batch size: 8 / 16 / 32 / 64. Changing the configuration resets training.
+Switching the dataset also resets training, since the vocabulary and context
+length change (21 positions for senryu, 111 for SF stories). To regenerate the
+SF stories, run `python3 generate-sf-story.py` and then `python3 package.py`.
 The default learning rate is 0.003 (in `train-worker.js` and `live-loader.js`).
 
 ## License

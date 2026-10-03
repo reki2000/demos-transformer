@@ -8,7 +8,7 @@ function getBaselineTrace(){const key=activeModelId+':'+example;if(!baselineTrac
 function selectDetailCell(map,row,col){
  const m=matrix(map);selectedCell={map,row:Math.min(row,m.length-1),col:Math.min(col,m[0].length-1)};inspected={...selectedCell};stop();$('cell-details').hidden=false;document.body.classList.add('details-open');render();
 }
-function closeDetailPanel(){selectedCell=null;$('cell-details').hidden=true;document.body.classList.remove('details-open');requestAnimationFrame(()=>{maps.forEach(drawMap);drawLoss()})}
+function closeDetailPanel(){selectedCell=null;$('cell-details').hidden=true;document.body.classList.remove('details-open');requestAnimationFrame(()=>{if(!data.snapshots.length)return;maps.forEach(drawMap);drawLoss()})}
 function renderCellDetails(){
  if(!selectedCell)return;
  const {map}=selectedCell,m=matrix(map),row=Math.min(selectedCell.row,m.length-1),col=Math.min(selectedCell.col,m[0].length-1),value=m[row][col],key=map.key,block=map.block;

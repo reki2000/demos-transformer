@@ -42,6 +42,7 @@ Requires Node.js 22+. Build first.
 node test-engine.cjs
 node test-page.cjs
 node test-completion.cjs
+node test-kvcache.cjs
 ```
 
 - Engine: agreement with an independent JavaScript implementation, numerical
@@ -49,6 +50,8 @@ node test-completion.cjs
 - Page: simulated DOM with real Workers and WASM; covers interaction,
   generation, stop and restore.
 - Completion: four epochs over 4,286 samples, plus continued training and stop.
+- KV cache: incremental decoding matches full recomputation, and beam search
+  returns the same candidates with and without the cache.
 
 The page tests are not a substitute for checking the appearance in real browsers.
 
@@ -100,7 +103,7 @@ is needed. The loss is not comparable with the earlier "unseen theme" split.
 Blocks: 2 / 4 / 6. Dimensions: 8 / 16 / 32 / 48 / 64.
 Batch size: 8 / 16 / 32 / 64. Changing the configuration resets training.
 Switching the dataset also resets training, since the vocabulary and context
-length change (21 positions for senryu, 126 for SF stories). To regenerate the
+length change (21 positions for senryu, 128 for SF stories). To regenerate the
 SF stories, run `python3 generate-sf-story.py` and then `python3 package.py`.
 The default learning rate is 0.003 (in `train-worker.js` and `live-loader.js`).
 

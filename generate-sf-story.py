@@ -1,12 +1,14 @@
 """Generate the SF short-story corpus (corpus-sf.json) in the corpus-common.json format.
 
-Each story is four sentences, 起承転結:
+Each story is a title in 『』 followed by four sentences, 起承転結:
   起 introduces the setting, the hero and a keepsake.
   承 brings a problem: lost signal, failing oxygen, a lost way, a blackout,
      contact with an unknown intelligence, or an artifact of advanced technology.
   転 turns it: the keepsake solves it, a hidden cause is revealed,
      or a stranger appears.
   結 resolves it the way that particular turn set up.
+The title names the turn (and sometimes the setting or keepsake), so a model
+given only the title has to write a story that leads to that turn.
 
 Settings range over the solar system, other stars, a future Earth and a
 present day where a different science took hold. Later sentences repeat the
@@ -47,21 +49,21 @@ SETTINGS = {
                       '氷の下から差す青い光', '氷の割れ目の底', True, True, False),
     'titan': setting('タイタン', 'タイタンの湖畔基地', '基地', '地球', '三時間後', '黒いもや',
                      '霧の中を漂う光の粒', 'メタンの湖の底', True, True, False),
-    'station': setting('軌道ステーション', '軌道ステーション', 'ステーション', '地上', '数秒後',
+    'station': setting('軌道', '軌道ステーション', 'ステーション', '地上', '数秒後',
                        '宇宙のちり', None, '船外のアンテナの陰', True, False, False),
-    'proxima': setting('プロキシマb', 'プロキシマbの開拓村', '開拓村', '地球', '八年後', '赤い花粉',
+    'proxima': setting('プロキシマ', 'プロキシマbの開拓村', '開拓村', '地球', '八年後', '赤い花粉',
                        '赤い森で光る胞子', '赤い森の奥', True, True, True),
     'trappist': setting('海の惑星', 'トラピストの海の惑星', '浮き島', '地球', '八十年後', '塩の結晶',
                         '海面で光る夜光虫', '浅い海の底', True, True, True),
     'ship': setting('世代船', '星々を渡る世代船', '船', '地球', '二百年後', '白い霜',
                     None, '使われていない貨物室', True, False, False),
-    'tokyo': setting('未来の東京', '海に沈んだ未来の東京', '水上の街', '高台の都市', '数分後', '潮の塩',
+    'tokyo': setting('沈んだ東京', '海に沈んだ未来の東京', '水上の街', '高台の都市', '数分後', '潮の塩',
                      '水没したビルの非常灯', '水没したビルの地下', False, True, True),
-    'dome': setting('氷河期の地球', '氷河期の地球のドーム都市', 'ドーム', '隣のドーム', '翌朝', '分厚い氷',
+    'dome': setting('ドーム都市', '氷河期のドーム都市', 'ドーム', '隣のドーム', '翌朝', '分厚い氷',
                     '氷の下で光るケーブル', '氷の下の古い地下鉄', False, True, True),
-    'osaka': setting('飛行船の大阪', '飛行船が行き交う現代の大阪', '格納庫', '管制塔', '数秒後', '鳩の羽根',
+    'osaka': setting('大阪の空', '飛行船の飛ぶ現代の大阪', '格納庫', '管制塔', '数秒後', '鳩の羽根',
                      '飛行船の誘導灯', '古い格納庫の奥', False, True, True),
-    'kyoto': setting('エーテルの京都', 'エーテル通信が広まった現代の京都', '研究所', '本局', '一瞬の後',
+    'kyoto': setting('京都', 'エーテル通信の京都', '研究所', '本局', '一瞬の後',
                      '古い蜘蛛の巣', '路地に浮かぶエーテルの灯', '寺の地下の蔵', False, True, True),
 }
 
@@ -79,6 +81,8 @@ ITEMS = {
     'flashlight': ('手回しの懐中電灯', '懐中電灯'),
     'musicbox': ('古いオルゴール', 'オルゴール'),
 }
+
+TITLE = '『{}』'
 
 KI = ['{place}で、{n}は{item}をいつも持ち歩いていた。',
       '{n}は{place}でひとり働き、{item}だけを友にしていた。',
@@ -99,92 +103,132 @@ SHO = {
                  '{where}に、まだ温かい金属の箱が埋まっていた。'],
 }
 
-# (problem, keepsake) -> (転, 結): the keepsake turns the story.
+# (problem, keepsake) -> (title, 転, 結): the keepsake turns the story.
 SOLVES = {
-    ('signal', 'radio'): ('{n}はラジオの部品で送信機を組み直した。',
+    ('signal', 'radio'): ('{ref}が呼んだ声',
+                          '{n}はラジオの部品で送信機を組み直した。',
                           '{delay}、{home}から「聞こえるよ」と返事が来た。'),
-    ('signal', 'letter'): ('手紙の隅に、古い非常用の周波数が書かれていた。',
+    ('signal', 'letter'): ('手紙の周波数',
+                           '手紙の隅に、古い非常用の周波数が書かれていた。',
                            'その周波数で呼ぶと、{delay}に懐かしい声が返ってきた。'),
-    ('oxygen', 'seed'): ('{n}は種を水耕槽にまき、葉に酸素を作らせた。',
+    ('oxygen', 'seed'): ('{scene}の小さな森',
+                         '{n}は種を水耕槽にまき、葉に酸素を作らせた。',
                          '{n}は緑の葉に囲まれて、救助の日を待った。'),
-    ('oxygen', 'radio'): ('{n}はラジオで近くを通る貨物船を呼んだ。',
+    ('oxygen', 'radio'): ('貨物船を呼べ',
+                          '{n}はラジオで近くを通る貨物船を呼んだ。',
                           '三日後、貨物船が{n}を迎えに来た。'),
-    ('lost', 'watch'): ('時計の針と星の位置から、{n}は方角を割り出した。',
+    ('lost', 'watch'): ('時計と星の道しるべ',
+                        '時計の針と星の位置から、{n}は方角を割り出した。',
                         '{n}は時計を握りしめ、夜明け前に{facility}へ戻った。'),
-    ('lost', 'photo'): ('写真に写る山の形が、遠くの稜線と重なった。',
+    ('lost', 'photo'): ('写真の中の山',
+                        '写真に写る山の形が、遠くの稜線と重なった。',
                         '{n}は写真の山を目指して歩き、{facility}にたどり着いた。'),
-    ('lost', 'compass'): ('方位磁石の針は、迷わず{facility}の方を指していた。',
+    ('lost', 'compass'): ('{scene}の方位磁石',
+                          '方位磁石の針は、迷わず{facility}の方を指していた。',
                           '針を信じて歩き、{n}は夜までに{facility}へ戻った。'),
-    ('lost', 'telescope'): ('望遠鏡をのぞくと、地平線に{facility}の灯りが見えた。',
+    ('lost', 'telescope'): ('地平線の灯り',
+                            '望遠鏡をのぞくと、地平線に{facility}の灯りが見えた。',
                             '{n}は灯りを目指して歩き、無事に{facility}へ戻った。'),
-    ('power', 'flashlight'): ('{n}は懐中電灯の発電機で、非常回路を動かした。',
+    ('power', 'flashlight'): ('手回しの明かり',
+                              '{n}は懐中電灯の発電機で、非常回路を動かした。',
                               '明かりが戻り、{facility}の機械が一つずつ目を覚ました。'),
-    ('contact', 'musicbox'): ('{n}がオルゴールを鳴らすと、光が同じ旋律で応えた。',
+    ('contact', 'musicbox'): ('光と歌う夜',
+                              '{n}がオルゴールを鳴らすと、光が同じ旋律で応えた。',
                               'その夜から、{n}と光は毎晩歌を交わした。'),
-    ('contact', 'radio'): ('ラジオが光の点滅を、知らない言葉の声に変えた。',
+    ('contact', 'radio'): ('最初の単語',
+                           'ラジオが光の点滅を、知らない言葉の声に変えた。',
                            '{n}は辞書を作り始め、最初の単語は「こんにちは」だった。'),
-    ('contact', 'telescope'): ('望遠鏡でのぞくと、光の奥で小さな影が手を振っていた。',
+    ('contact', 'telescope'): ('手を振る影',
+                               '望遠鏡でのぞくと、光の奥で小さな影が手を振っていた。',
                                '{n}は望遠鏡を下ろし、大きく手を振り返した。'),
-    ('artifact', 'watch'): ('時計を近づけると、装置の針が同じ速さで動き出した。',
+    ('artifact', 'watch'): ('同じ職人の名',
+                            '時計を近づけると、装置の針が同じ速さで動き出した。',
                             '装置の裏には、時計と同じ職人の名が刻まれていた。'),
-    ('artifact', 'photo'): ('写真の隅に、同じ形の装置が写っていた。',
+    ('artifact', 'photo'): ('祖母の装置',
+                            '写真の隅に、同じ形の装置が写っていた。',
                             '写真の中で装置を抱えていたのは、若い日の祖母だった。'),
-    ('artifact', 'letter'): ('手紙の最後に、この装置の図が描かれていた。',
+    ('artifact', 'letter'): ('手紙の設計図',
+                             '手紙の最後に、この装置の図が描かれていた。',
                              '手紙の手順どおりに触れると、装置は静かに目を覚ました。'),
 }
 
-# twist -> problem -> [(転, 結)]: each 結 answers its own 転.
+# twist -> problem -> [(title, 転, 結)]: each 結 answers its own 転, and the
+# title names that turn.
 TWISTS = {
     'reveal': {
-        'signal': [('原因は、アンテナに積もった{dust}だった。',
+        'signal': [('{scene}の{dust}',
+                    '原因は、アンテナに積もった{dust}だった。',
                     '{n}が{dust}を払うと、{delay}に{home}の声が戻った。'),
-                   ('途絶えたのは、{home}側の送信所が壊れたからだった。',
+                   ('待ち続ける{scene}',
+                    '途絶えたのは、{home}側の送信所が壊れたからだった。',
                     '{n}は{ref}を握り、{home}の修理を信じて待ち続けた。')],
-        'oxygen': [('だが本当に壊れていたのは、酸素計の方だった。',
+        'oxygen': [('百日分の酸素',
+                    'だが本当に壊れていたのは、酸素計の方だった。',
                     '酸素はまだ百日分あり、{n}は{ref}を見て笑った。'),
-                   ('漏れていたのは、使っていない倉庫の空気だった。',
+                   ('閉ざされた倉庫',
+                    '漏れていたのは、使っていない倉庫の空気だった。',
                     '{n}は倉庫の扉を閉め、{ref}をそっと机に戻した。')],
-        'lost': [('足元の足跡は、さっき通った{n}自身のものだった。',
+        'lost': [('自分の足跡',
+                  '足元の足跡は、さっき通った{n}自身のものだった。',
                   '{n}は足跡を逆にたどり、{ref}を握って{facility}に戻った。'),
-                 ('道に迷ったのではなく、地図の方が古かった。',
+                 ('古い地図',
+                  '道に迷ったのではなく、地図の方が古かった。',
                   '{n}は地図を描き直し、{ref}と一緒に{facility}へ帰った。')],
-        'power': [('止まったのは、発電機の点検の時刻だったからだ。',
+        'power': [('点検の時刻',
+                   '止まったのは、発電機の点検の時刻だったからだ。',
                    '一時間後に電力は戻り、{n}は{ref}を見て苦笑した。'),
-                  ('電力は、誰かが別の場所へこっそり流していた。',
+                  ('盗まれた電力',
+                   '電力は、誰かが別の場所へこっそり流していた。',
                    'たどった先では、凍えた小さな生き物たちが身を寄せていた。')],
-        'contact': [('光の点滅は、素数を一つずつ数えていた。',
+        'contact': [('素数を数える光',
+                     '光の点滅は、素数を一つずつ数えていた。',
                      '{n}は次の素数を光で送り返し、{ref}を胸に返事を待った。'),
-                    ('信号は、百年後の{n}自身が送ったものだった。',
+                    ('百年後からの合図',
+                     '信号は、百年後の{n}自身が送ったものだった。',
                      '{n}は{ref}をその場に埋め、未来の自分への合図にした。')],
-        'artifact': [('装置は、百万年前の人類が残したものだった。',
+        'artifact': [('百万年前の贈り物',
+                      '装置は、百万年前の人類が残したものだった。',
                       '{n}は{ref}と並べて装置を置き、人類の長い歴史を思った。'),
-                     ('装置の中には、{n}の名前が書かれた紙が入っていた。',
+                     ('名前の書かれた紙',
+                      '装置の中には、{n}の名前が書かれた紙が入っていた。',
                       '{n}はその紙に今日の日付を書き足し、装置を元に戻した。')],
     },
     'stranger': {
-        'signal': [('そのとき、知らない言葉の信号が届いた。',
+        'signal': [('知らない言葉',
+                    'そのとき、知らない言葉の信号が届いた。',
                     '{n}は{ref}をそばに置き、初めての返事を送った。'),
-                   ('かわりに、{home}ではない誰かが応答した。',
+                   ('もう一人の応答者',
+                    'かわりに、{home}ではない誰かが応答した。',
                     '{n}はその誰かと、{home}との通信が戻るまで話し続けた。')],
-        'oxygen': [('そのとき、扉の外に見知らぬ影が立っていた。',
+        'oxygen': [('扉の外の影',
+                    'そのとき、扉の外に見知らぬ影が立っていた。',
                     '影が置いた酸素の箱で、{n}は救助まで生き延びた。'),
-                   ('通気口から、知らない誰かが空気を送ってきた。',
+                   ('通気口の贈り物',
+                    '通気口から、知らない誰かが空気を送ってきた。',
                     '{n}は通気口に{ref}を置き、感謝のしるしにした。')],
-        'lost': [('{glow}が、{n}の前に道を照らした。',
+        'lost': [('導く光',
+                  '{glow}が、{n}の前に道を照らした。',
                   '光を追って{facility}に戻り、{n}は{ref}にそっと礼を言った。'),
-                 ('どこからか、{n}の名を呼ぶ声がした。',
+                 ('名を呼ぶ声',
+                  'どこからか、{n}の名を呼ぶ声がした。',
                   '声の方へ歩くと{facility}があり、{n}は{ref}を握りしめた。')],
-        'power': [('暗闇の中で、壁の向こうから誰かがノックした。',
+        'power': [('壁の向こうのノック',
+                   '暗闇の中で、壁の向こうから誰かがノックした。',
                    '翌朝、扉の前に{facility}を動かす小さな電池が置かれていた。'),
-                  ('見知らぬ機械が現れ、{facility}に電力を分け与えた。',
+                  ('通りすがりの機械',
+                   '見知らぬ機械が現れ、{facility}に電力を分け与えた。',
                    '機械は何も言わずに去り、{n}は{ref}に今日のことを話した。')],
-        'contact': [('光の中から、{n}によく似た誰かが現れた。',
+        'contact': [('よく似た誰か',
+                     '光の中から、{n}によく似た誰かが現れた。',
                      'その誰かは{ref}を指さし、同じものを持っていると示した。'),
-                    ('光は、{n}の言葉を真似して話し始めた。',
+                    ('真似をする光',
+                     '光は、{n}の言葉を真似して話し始めた。',
                      '{n}は{ref}の話を聞かせ、光はそれを静かに聞いていた。')],
-        'artifact': [('装置が開き、中から小さな機械が歩み出た。',
+        'artifact': [('箱から来た機械',
+                      '装置が開き、中から小さな機械が歩み出た。',
                       '機械は{n}の{ref}を見つめ、同じ形を作って差し出した。'),
-                     ('装置から、知らない誰かの声が{n}の名を呼んだ。',
+                     ('星の地図',
+                      '装置から、知らない誰かの声が{n}の名を呼んだ。',
                       '{n}が答えると、装置は星の地図を空中に描いた。')],
     },
 }
@@ -200,17 +244,17 @@ def problem_allowed(setting_key, problem):
 
 
 def arcs(setting_key, problem, item):
-    """Every (twist, arc id, 転, 結) available for these slots."""
+    """Every (twist, arc id, title, 転, 結) available for these slots."""
     st, out = SETTINGS[setting_key], []
     solve = SOLVES.get((problem, item))
     # A compass is useless without a magnetic field.
     if solve and not (item == 'compass' and not st['magnetic']):
         out.append(('item', 'item', *solve))
     for twist, by_problem in TWISTS.items():
-        for k, (ten, ketsu) in enumerate(by_problem[problem]):
+        for k, (title, ten, ketsu) in enumerate(by_problem[problem]):
             if '{glow}' in ten and st['glow'] is None:
                 continue
-            out.append((twist, f'{twist}{k}', ten, ketsu))
+            out.append((twist, f'{twist}{k}', title, ten, ketsu))
     return out
 
 
@@ -218,7 +262,7 @@ def compose(setting, name, item, problem, arc, choice):
     """Return [(sentence, facts it implies)] for one choice of every slot."""
     st = SETTINGS[setting]
     ki, sho = choice
-    twist, _, ten, ketsu = next(a for a in arcs(setting, problem, item) if a[1] == arc)
+    twist, _, title, ten, ketsu = next(a for a in arcs(setting, problem, item) if a[1] == arc)
     fill = dict(n=name, item=ITEMS[item][0], ref=ITEMS[item][1], **st)
 
     def facts(template, **base):
@@ -228,11 +272,12 @@ def compose(setting, name, item, problem, arc, choice):
         if '{ref}' in template or base.get('twist') == 'item':
             base['item'] = item
         if any('{' + k + '}' in template for k in
-               ('place', 'facility', 'home', 'delay', 'dust', 'glow', 'where')):
+               ('scene', 'place', 'facility', 'home', 'delay', 'dust', 'glow', 'where')):
             base['setting'] = setting
         return base
 
     return [
+        (TITLE.format(title.format(**fill)), facts(title, problem=problem, twist=twist, arc=arc)),
         (KI[ki].format(**fill), dict(setting=setting, name=name, item=item)),
         (SHO[problem][sho].format(**fill), facts(SHO[problem][sho], problem=problem)),
         (ten.format(**fill), facts(ten, problem=problem, twist=twist, arc=arc)),
@@ -246,7 +291,7 @@ def all_slots():
             if not problem_allowed(setting_key, problem):
                 continue
             for item in ITEMS:
-                for _, arc, _, _ in arcs(setting_key, problem, item):
+                for _, arc, *_ in arcs(setting_key, problem, item):
                     for name in NAMES:
                         for choice in [(k, s) for k in range(len(KI))
                                        for s in range(len(SHO[problem]))]:
@@ -254,9 +299,15 @@ def all_slots():
                                        problem=problem, arc=arc, choice=choice)
 
 
-def split_sentences(text):
-    parts = text.split('。')
-    return [p + '。' for p in parts[:-1]] if parts[-1] == '' else None
+def split_story(text):
+    """Split into [title, 起, 承, 転, 結], or None when the shape is wrong."""
+    if not text.startswith('『') or '』' not in text:
+        return None
+    end = text.index('』') + 1
+    parts = text[end:].split('。')
+    if parts[-1] != '':
+        return None
+    return [text[:end]] + [p + '。' for p in parts[:-1]]
 
 
 _TABLE = None
@@ -265,19 +316,19 @@ _TABLE = None
 def check_story(text):
     """Classify a story: 'consistent', 'inconsistent' or 'unknown-sentence'.
 
-    A sentence the generator never produces makes it 'unknown-sentence'.
+    A title or sentence the generator never produces makes it 'unknown-sentence'.
     Otherwise the story is consistent when one assignment of setting, hero,
-    keepsake, problem and turn explains all four sentences and that turn is
-    possible there.
+    keepsake, problem and turn explains the title and all four sentences and
+    that turn is possible there.
     """
     global _TABLE
     if _TABLE is None:
-        _TABLE = [dict() for _ in range(4)]
+        _TABLE = [dict() for _ in range(5)]
         for slots in all_slots():
             for pos, (sentence, facts) in enumerate(compose(**slots)):
                 _TABLE[pos].setdefault(sentence, set()).add(tuple(sorted(facts.items())))
-    sentences = split_sentences(text)
-    if not sentences or len(sentences) != 4 or \
+    sentences = split_story(text)
+    if not sentences or len(sentences) != 5 or \
             any(s not in _TABLE[i] for i, s in enumerate(sentences)):
         return 'unknown-sentence'
     states = [{}]
@@ -340,7 +391,7 @@ def main():
     train_idx = [i for i in range(COUNT) if i not in test_set]
 
     def sentences(indices):
-        return {s for i in indices for s in split_sentences(records[i]['text'])}
+        return {s for i in indices for s in split_story(records[i]['text'])[1:]}
     assert set(''.join(records[i]['text'] for i in test_idx)) <= \
         set(''.join(records[i]['text'] for i in train_idx)), 'evaluation-only character'
     assert all(check_story(r['text']) == 'consistent' for r in records)

@@ -33,11 +33,13 @@ Node.js 22 以降を使用します。先に再ビルドしてください。
 node test-engine.cjs
 node test-page.cjs
 node test-completion.cjs
+node test-kvcache.cjs
 ```
 
 - エンジン：独立した JavaScript 推論との一致、数値微分による勾配確認、実学習、全15構成。
 - ページ：DOM を模擬し、実際の Worker と WASM で操作・生成・停止・復元を検証。
 - 完走：4,286件を4周学習し、追加学習と停止を検証。
+- KVキャッシュ：逐次推論と全系列の再計算の一致、キャッシュ有無でビーム生成の結果が同じことを検証。
 
 ページの検証は実ブラウザでの外観確認とは異なります。
 `all-themes-verification.json` はデータ分割変更時の検証結果です。
@@ -86,7 +88,7 @@ python3 package.py
 
 ブロック数：2 / 4 / 6。次元数：8 / 16 / 32 / 48 / 64。
 バッチサイズ：8 / 16 / 32 / 64。構成変更では学習を初期化します。
-データセットを切り替えると、語彙と文脈長（川柳21・SF掌編126位置）が変わるため学習を初期化します。
+データセットを切り替えると、語彙と文脈長（川柳21・SF掌編128位置）が変わるため学習を初期化します。
 SF掌編を再生成する場合は `python3 generate-sf-story.py` のあと `python3 package.py` を実行してください。
 学習率は `train-worker.js` と `live-loader.js` の既定値 0.003 です。
 

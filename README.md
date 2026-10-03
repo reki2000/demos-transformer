@@ -63,6 +63,7 @@ The page tests are not a substitute for checking the appearance in real browsers
 | `live-page.html` / `style.css` | HTML template and styles |
 | `corpus-common.json` | 5,000 samples with text, readings, themes, character vocabulary, tokens and split info |
 | `split-all-themes.py` | Reproduces the train/eval split covering all 14 themes |
+| `generate-sf-poem.py` / `corpus-sf.json` | SF poem corpus generator and its output (prototype, not yet wired into the page) |
 | `package.py` | Builds the single HTML file and its ZIP |
 | `test-*.cjs` | Tests |
 

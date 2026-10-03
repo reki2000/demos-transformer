@@ -53,6 +53,7 @@ node test-completion.cjs
 | `live-page.html` / `style.css` | HTML テンプレートと画面のスタイル |
 | `corpus-common.json` | 本文・読み・テーマ・文字語彙・トークン・分割情報を含む5,000件 |
 | `split-all-themes.py` | 全14テーマを含む学習／評価分割を再現 |
+| `generate-sf-poem.py` / `corpus-sf.json` | SF詩コーパス（試作、画面には未接続）の生成器と生成結果 |
 | `package.py` | 単一HTMLとそのZIPを作成 |
 | `test-*.cjs` | 検証コード |
 

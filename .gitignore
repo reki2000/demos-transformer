@@ -1,3 +1,4 @@
 dist/
 combined*.js
 engine.wasm
+__pycache__/

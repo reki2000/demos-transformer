@@ -100,7 +100,7 @@ is needed. The loss is not comparable with the earlier "unseen theme" split.
 Blocks: 2 / 4 / 6. Dimensions: 8 / 16 / 32 / 48 / 64.
 Batch size: 8 / 16 / 32 / 64. Changing the configuration resets training.
 Switching the dataset also resets training, since the vocabulary and context
-length change (21 positions for senryu, 111 for SF stories). To regenerate the
+length change (21 positions for senryu, 126 for SF stories). To regenerate the
 SF stories, run `python3 generate-sf-story.py` and then `python3 package.py`.
 The default learning rate is 0.003 (in `train-worker.js` and `live-loader.js`).
 

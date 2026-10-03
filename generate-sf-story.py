@@ -205,7 +205,13 @@ MARKERS = _markers()
 
 
 def check_story(text):
-    """Loosely check that a story holds together: 'consistent', 'inconsistent' or 'malformed'.
+    return check_story_detail(text)[0]
+
+
+def check_story_detail(text):
+    """Return (verdict, kind): kind names what disagreed (name, clue, setting, problem).
+
+    Loosely check that a story holds together: 'consistent', 'inconsistent' or 'malformed'.
 
     'malformed' unless it is a 『title』 and four sentences. Otherwise every
     hero name, element and setting detail mentioned anywhere must be the one
@@ -215,7 +221,7 @@ def check_story(text):
     """
     parts = split_story(text)
     if not parts:
-        return 'malformed'
+        return 'malformed', None
     for kind, words in MARKERS.items():
         # Longest words first, so '青い石' is not also read as a shorter word.
         ordered = sorted(words, key=len, reverse=True)
@@ -233,13 +239,13 @@ def check_story(text):
         first = 2 if kind == 'problem' else 1
         introduced = found(parts[first])
         if len(introduced) != 1 and kind != 'setting':
-            return 'inconsistent'
+            return 'inconsistent', kind
         if kind == 'setting' and not introduced:
             continue
         rest = found(''.join(p for i, p in enumerate(parts) if i != first))
         if rest - introduced:
-            return 'inconsistent'
-    return 'consistent'
+            return 'inconsistent', kind
+    return 'consistent', None
 
 
 def main():

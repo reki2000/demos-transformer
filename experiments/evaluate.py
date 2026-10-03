@@ -43,7 +43,9 @@ def story_turn(body):
 
 def summarize(result):
     gens = result['generations']
-    verdicts = [story.check_story(g['text']) for g in gens]
+    details = [story.check_story_detail(g['text']) for g in gens]
+    verdicts = [v for v, _ in details]
+    reasons = {k: sum(kind == k for _, kind in details) / len(gens) for k in ('name', 'clue', 'setting', 'problem')}
     turn_ok = 0
     for g in gens:
         title, _, body = g['text'].partition('』')
@@ -56,6 +58,7 @@ def summarize(result):
         turn=turn_ok / n,
         copied=sum(g['text'] in train_texts for g in gens) / n,
         distinct=len({g['text'] for g in gens}) / n,
+        reasons=reasons,
     )
 
 
@@ -67,13 +70,18 @@ def main():
              f'データ：corpus-sf.json（学習{len(corpus["trainIndices"])}話・評価{len(corpus["testIndices"])}話）。'
              'バッチ16・学習率0.003・4周・seed 42。生成は評価用の各話のタイトルまでを入力し、貪欲法で〈終〉まで（最大128文字）。', '',
              '## 損失と生成の質', '',
-             '| 構成 | パラメータ | 評価損失 | 次文字正解率 | 整合 | 不整合 | 形式崩れ | タイトルどおりの転 | 学習データの丸写し |',
-             '|---|---:|---:|---:|---:|---:|---:|---:|---:|']
+             '| 構成 | パラメータ | 評価損失 | 次文字正解率 | 整合 | 不整合 | 形式崩れ | タイトルどおりの転 | 学習データの丸写し | 異なる話の割合 |',
+             '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|']
     for r in results:
         s = summarize(r)
         lines.append(f"| {r['layers']}層・{r['dimension']}次元・{r['heads']}ヘッド | {r['parameters']:,} | {r['testLoss']:.3f} | "
                      f"{pct(r['testAccuracy'])} | {pct(s['consistent'])} | {pct(s['inconsistent'])} | {pct(s['malformed'])} | "
-                     f"{pct(s['turn'])} | {pct(s['copied'])} |")
+                     f"{pct(s['turn'])} | {pct(s['copied'])} | {pct(s['distinct'])} |")
+    lines += ['', '## 不整合の内訳', '', '不整合と判定された話が、最初に食い違った要素。割合は生成した話全体に対するもの。', '',
+              '| 構成 | 主人公の名前 | 伏線の要素 | 舞台の細部 | 問題 |', '|---|---:|---:|---:|---:|']
+    for r in results:
+        rs = summarize(r)['reasons']
+        lines.append(f"| {r['layers']}層・{r['dimension']}次元・{r['heads']}ヘッド | " + ' | '.join(pct(rs[k]) for k in ('name', 'clue', 'setting', 'problem')) + ' |')
     lines += ['', '## 層ごとの注意の平均距離', '',
               '評価用64話で、各位置の注意が平均何文字前を参照しているか（全ヘッド平均）。括弧内はヘッドごとの最小〜最大。'
               '「20字以上前」は注意の重みのうち20文字以上前に向かう割合。', '',

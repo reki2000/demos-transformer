@@ -6,7 +6,8 @@
 
 An interactive visualization of a tiny decoder-only Transformer that is actually
 trained inside your browser. The corpus is a set of senryu (5-7-5 Japanese
-poems) about child-rearing, covering 14 themes. There are no external requests
+poems) about child-rearing, covering 14 themes; a "Data" selector switches to
+5,000 generated four-act SF short stories. There are no external requests
 and no external libraries.
 
 ## Usage
@@ -41,13 +42,16 @@ Requires Node.js 22+. Build first.
 node test-engine.cjs
 node test-page.cjs
 node test-completion.cjs
+node test-kvcache.cjs
 ```
 
-- Engine: agreement with an independent JavaScript implementation, numerical
+- Engine (also checks 2 and 4 heads): agreement with an independent JavaScript implementation, numerical
   gradient checks, real training, all 15 configurations.
 - Page: simulated DOM with real Workers and WASM; covers interaction,
   generation, stop and restore.
 - Completion: four epochs over 4,286 samples, plus continued training and stop.
+- KV cache: incremental decoding matches full recomputation, and beam search
+  returns the same candidates with and without the cache.
 
 The page tests are not a substitute for checking the appearance in real browsers.
 
@@ -63,6 +67,8 @@ The page tests are not a substitute for checking the appearance in real browsers
 | `live-page.html` / `style.css` | HTML template and styles |
 | `corpus-common.json` | 5,000 samples with text, readings, themes, character vocabulary, tokens and split info |
 | `split-all-themes.py` | Reproduces the train/eval split covering all 14 themes |
+| `generate-sf-story.py` / `corpus-sf.json` | Generator and output for 5,000 four-act SF short stories |
+| `datasets.json` | Datasets offered in the page (label, description, CSV name) |
 | `package.py` | Builds the single HTML file and its ZIP |
 | `test-*.cjs` | Tests |
 
@@ -94,9 +100,25 @@ is needed. The loss is not comparable with the earlier "unseen theme" split.
 
 ## Configuration
 
-Blocks: 2 / 4 / 6. Dimensions: 8 / 16 / 32 / 48 / 64.
+Blocks: 2 / 4 / 6. Dimensions: 8 / 16 / 32 / 48 / 64. Heads: 1 / 2 / 4 (the
+dimension is split evenly; each head needs at least 4 columns). With several
+heads each block shows one attention map per head. The "mean distance" in each
+block header is how many characters back attention reaches on the shown example.
 Batch size: 8 / 16 / 32 / 64. Changing the configuration resets training.
+Switching the dataset also resets training, since the vocabulary and context
+length change (21 positions for senryu, 128 for SF stories). To regenerate the
+SF stories, run `python3 generate-sf-story.py` and then `python3 package.py`.
 The default learning rate is 0.003 (in `train-worker.js` and `live-loader.js`).
+
+## Experiment: blocks and heads
+
+`experiments/depth-heads.md` compares 2, 4 and 6 blocks with 1 and 4 heads
+(64 dimensions) on the SF stories. To reproduce (10–20 minutes per configuration):
+
+```sh
+node experiments/depth-heads.cjs 4 64 4   # blocks dimensions heads
+python3 experiments/evaluate.py
+```
 
 ## License
 

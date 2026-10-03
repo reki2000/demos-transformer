@@ -1,0 +1,15 @@
+const fs=require('fs'),assert=require('assert');const {WasmTransformer}=require('./engine.js');const {decoderPredict,decoderCache,decoderStep}=require('./decoder.js');const {decoderBeamGenerate}=require('./beam.js');
+// Reference beam search without a cache: recomputes the whole prefix at every step.
+async function referenceBeam(weights,seedIds,width,limit){let active=[{tokens:[],logProbability:0}],finished=[];const compare=(a,b)=>b.logProbability-a.logProbability;
+ for(let step=0;step<limit&&active.length;step++){const candidates=[];for(const beam of active){const probs=decoderPredict(weights,seedIds.concat(beam.tokens));const ranked=probs.map((p,id)=>({id,p})).filter(x=>x.id>=2).sort((a,b)=>b.p-a.p).slice(0,width);for(const next of ranked){const logProbability=beam.logProbability+Math.log(Math.max(next.p,1e-300));if(next.id===2)finished.push({tokens:beam.tokens.slice(),logProbability,scoredLength:beam.tokens.length+1});else candidates.push({tokens:beam.tokens.concat(next.id),logProbability})}}active=candidates.sort(compare).slice(0,width);finished=finished.sort((a,b)=>b.logProbability/b.scoredLength-a.logProbability/a.scoredLength).slice(0,50)}
+ const all=finished.concat(active.map(b=>({...b,scoredLength:b.tokens.length}))),seen=new Set();return all.map(b=>({...b,score:b.logProbability/Math.max(1,b.scoredLength)})).sort((a,b)=>b.score-a.score).filter(b=>{const key=b.tokens.join(',');if(seen.has(key))return false;seen.add(key);return true}).slice(0,width)}
+(async()=>{const bytes=fs.readFileSync(__dirname+'/engine.wasm');
+ for(const file of ['corpus-common.json','corpus-sf.json']){const data=JSON.parse(fs.readFileSync(__dirname+'/'+file)),context=Math.max(...data.rows.map(r=>r.length))-1;
+  for(const heads of [1,4]){const engine=await WasmTransformer.create(bytes,{dimension:16,layers:2,heads,vocabSize:data.vocab.length,context,seed:42});for(let i=0;i<30;i++)engine.train(data.rows,data.trainIndices.slice(i*16%400,i*16%400+16));const weights=engine.arrays();
+  // Every incremental step matches a full forward pass over the same prefix.
+  const row=data.rows[0].slice(0,-1),cache=decoderCache(weights);let maximum=0;for(let t=0;t<row.length;t++){const a=decoderStep(weights,cache,row[t]),b=decoderPredict(weights,row.slice(0,t+1));for(let j=0;j<a.length;j++)maximum=Math.max(maximum,Math.abs(a[j]-b[j]))}assert(maximum<1e-12,maximum);
+  // Beam search with the cache returns the same candidates, including past the context window (senryu: limit 40 > 21).
+  const seed=row.slice(0,3),limit=Math.max(40,context);let start=Date.now();const fast=await decoderBeamGenerate(weights,seed,5,limit,()=>false,async()=>{});const fastMs=Date.now()-start;start=Date.now();const slow=await referenceBeam(weights,seed,5,limit);const slowMs=Date.now()-start;
+  assert.deepEqual(fast.map(b=>b.tokens),slow.map(b=>b.tokens));for(let i=0;i<fast.length;i++)assert(Math.abs(fast[i].score-slow[i].score)<1e-9);
+  console.log('PASS KV cache',file,heads+' head(s)','step max diff',maximum,'beam',limit,'chars:',fastMs,'ms with cache vs',slowMs,'ms without')}}
+})().catch(e=>{console.error(e);process.exitCode=1});

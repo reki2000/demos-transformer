@@ -120,6 +120,9 @@ p,g,m,v,n,lr,cm,cv,j,norm,clip,gg,mm,vv=[f[k] for k in ['p','g','m','v','n','lr'
 body=f.set('gg',load(ptr(g,j))*clip)+f.set('mm',load(ptr(m,j))*.9+gg*.1)+f.set('vv',load(ptr(v,j))*.999+gg*gg*.001)+store(ptr(m,j),mm)+store(ptr(v,j),vv)+store(ptr(p,j),load(ptr(p,j))-lr*(mm/cm)/((vv/cv).sqrt()+1e-8))
 code=f.set('norm',0)+f.loop('j',0,n,f.set('gg',load(ptr(g,j)))+f.set('norm',norm+gg*gg))+f.set('norm',norm.sqrt())+f.set('clip',(fl(1)/norm.max(1e-9)).min(1))+f.loop('j',0,n,body)+norm.c;add('adam',f,code)
 # Construct module and include memory as an import so the worker can grow it.
+# 16384 pages = 1 GiB: six blocks of 64 dimensions with four heads over 128 positions
+# and a batch of 64 need about 600 MiB; memory only grows as far as a configuration needs.
+MAX_PAGES=16384
 types=[]
 def tid(params,result):
  sig=(tuple(params),result)
@@ -130,7 +133,7 @@ for _,f,_ in functions:tid([t for _,t in f.ps],f.result)
 def section(n,b):return bytes([n])+u(len(b))+b
 module=b'\0asm\1\0\0\0'
 module+=section(1,vec([b'\x60'+vec([bytes([x]) for x in ps])+vec([] if rt is None else [bytes([rt])]) for ps,rt in types]))
-module+=section(2,vec([name('env')+name(n)+b'\x00'+u(tid(ps,rt)) for n,ps,rt in imports]+[name('env')+name('memory')+b'\x02\x01'+u(64)+u(2048)]))
+module+=section(2,vec([name('env')+name(n)+b'\x00'+u(tid(ps,rt)) for n,ps,rt in imports]+[name('env')+name('memory')+b'\x02\x01'+u(64)+u(MAX_PAGES)]))
 module+=section(3,vec([u(tid([t for _,t in f.ps],f.result)) for _,f,_ in functions]))
 module+=section(7,vec([name(n)+b'\x00'+u(i+len(imports)) for i,(n,_,_) in enumerate(functions)]))
 bodies=[]

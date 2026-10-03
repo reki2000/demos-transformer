@@ -33,6 +33,7 @@ jobs:
         run: |
           node test-engine.cjs
           node test-page.cjs
+          node test-kvcache.cjs
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

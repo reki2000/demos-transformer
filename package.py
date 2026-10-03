@@ -2,7 +2,11 @@ from pathlib import Path
 import json,gzip,base64,zipfile
 p=Path(__file__).parent
 common=json.loads((p/'corpus-common.json').read_text());assert len(common['rows'])==5000 and len(common['trainIndices'])==4286 and len(common['testIndices'])==714
-blob=base64.b64encode(gzip.compress(json.dumps(common,ensure_ascii=False,separators=(',',':')).encode(),compresslevel=9,mtime=0)).decode()
+datasets=[]
+for entry in json.loads((p/'datasets.json').read_text()):
+    corpus=json.loads((p/entry['file']).read_text());assert len(corpus['vocab'])%4==0 and corpus['trainIndices'] and corpus['testIndices']
+    datasets.append({**{k:v for k,v in entry.items() if k!='file'},**corpus})
+blob=base64.b64encode(gzip.compress(json.dumps({'datasets':datasets},ensure_ascii=False,separators=(',',':')).encode(),compresslevel=9,mtime=0)).decode()
 loader=(p/'live-loader.js').read_text().replace("JSON.parse(document.getElementById('training-data').textContent)","JSON.parse(await new Response(new Blob([Uint8Array.from(atob(document.getElementById('training-data').textContent.trim()),c=>c.charCodeAt(0))]).stream().pipeThrough(new DecompressionStream('gzip'))).text())")
 js="(async()=>{\n"+loader+'\n'+(p/'decoder.js').read_text()+'\n'+(p/'live-app.js').read_text()+'\n'+(p/'details.js').read_text()+"\nawait initializeModel();\n})().catch(error=>{document.getElementById('status').textContent='開始できませんでした：'+error.message});"
 training=(p/'engine.js').read_text()+'\n'+(p/'train-worker.js').read_text();inference=(p/'decoder.js').read_text()+'\n'+(p/'beam.js').read_text()+'\n'+(p/'infer-worker.js').read_text()

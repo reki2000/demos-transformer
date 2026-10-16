@@ -1,11 +1,11 @@
 'use strict';
 // In the browser decoder.js is concatenated before this file; Node loads it here.
-if(typeof module!=='undefined'&&typeof decoderStep==='undefined')var {decoderPredict,decoderCache,decoderCacheClone,decoderStep}=require('./decoder.js');
+if(typeof module!=='undefined'&&typeof decoderStep==='undefined')var {decoderPredict,decoderCache,decoderCacheClone,decoderStep,decoderModel}=require('./decoder.js');
 // Each hypothesis feeds only its own predicted characters back into the decoder.
 // Hypotheses carry a key/value cache; one that outgrows the context window
 // falls back to full recomputation over the most recent positions.
 async function decoderBeamGenerate(weights,seedIds,width=5,limit=40,cancelled=()=>false,yieldStep=()=>new Promise(resolve=>setTimeout(resolve,0))){
- const context=weights.P.length;
+ const context=decoderModel(weights).context;
  let root=null,rootProbs=null;
  if(seedIds.length<=context){root=decoderCache(weights);for(const id of seedIds)rootProbs=decoderStep(weights,root,id)}
  let active=[{tokens:[],logProbability:0,reason:null,cache:root,probs:rootProbs,pending:null}],finished=[];

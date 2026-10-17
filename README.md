@@ -7,8 +7,9 @@
 An interactive visualization of a tiny decoder-only Transformer that is actually
 trained inside your browser. The corpus is a set of senryu (5-7-5 Japanese
 poems) about child-rearing, covering 14 themes; a "Data" selector switches to
-5,000 generated four-act SF short stories. There are no external requests
-and no external libraries.
+5,000 generated four-act SF short stories. A "Model" selector switches between
+five model families (below), and a structure diagram shows the selected one.
+There are no external requests and no external libraries.
 
 ## Usage
 
@@ -17,6 +18,27 @@ Edge, Firefox or Safari and press the start-training button. The browser must
 support WebAssembly SIMD, Web Workers and `DecompressionStream`.
 The page is a single HTML file with the data, WASM binary and code embedded.
 Training state is lost when the tab is closed.
+
+## Models
+
+| Model | What it is |
+| --- | --- |
+| Standard Transformer | The original layout: learned position table, LayerNorm, tanh MLP, causal attention |
+| Modern Transformer | RoPE (rotary positions), RMSNorm and SwiGLU, with about the same parameter count |
+| Diffusion LM | Modern backbone with bidirectional attention, trained to recover randomly masked characters (masked diffusion). Generation starts from all masks and reveals the most confident positions step by step |
+| Looped Transformer | One modern block applied L times with shared weights; the number of loops can also be changed at generation time |
+| Mamba-3 | Modern backbone with the attention mixer replaced by a Mamba-3 state-space mixer (exponential-trapezoidal discretization, rotation for the complex state, output gate) |
+
+The last three change exactly one thing from the modern Transformer; the
+diagram marks the changed parts in orange. Mamba-3 is trained in its quadratic
+form, which has the same shape as attention, so the page shows its mixing
+matrix M where the others show attention. Generation uses the recurrent form
+with a fixed-size state. The diffusion loss averages over hidden characters
+only, so it is not directly comparable with the next-character loss of the
+other models.
+
+Generation starts from the text typed in the generation box; when the box is
+empty it starts from the example up to the selected position.
 
 ## Build
 
@@ -45,13 +67,15 @@ node test-completion.cjs
 node test-kvcache.cjs
 ```
 
-- Engine (also checks 2 and 4 heads): agreement with an independent JavaScript implementation, numerical
-  gradient checks, real training, all 15 configurations.
+- Engine (also checks 2 and 4 heads, and every model family): agreement with an independent JavaScript
+  implementation, numerical gradient checks of every parameter tensor, real training, all 15 configurations,
+  shared weights of the looped model, and diffusion masking.
 - Page: simulated DOM with real Workers and WASM; covers interaction,
   generation, stop and restore.
 - Completion: four epochs over 4,286 samples, plus continued training and stop.
-- KV cache: incremental decoding matches full recomputation, and beam search
-  returns the same candidates with and without the cache.
+- KV cache: incremental decoding matches full recomputation (for Mamba-3, the
+  recurrent state matches the quadratic form), and beam search returns the same
+  candidates with and without the cache.
 
 The page tests are not a substitute for checking the appearance in real browsers.
 
@@ -59,11 +83,11 @@ The page tests are not a substitute for checking the appearance in real browsers
 
 | File | Description |
 | --- | --- |
-| `build-wasm.py` | Emits the 13 numeric kernels directly as `engine.wasm` (build output, git-ignored) |
-| `engine.js` | Transformer forward/backward, Adam, memory management |
+| `build-wasm.py` | Emits the 22 numeric kernels directly as `engine.wasm` (build output, git-ignored) |
+| `engine.js` | Forward/backward of all five model families, Adam, memory management |
 | `train-worker.js` | Mini-batch training, evaluation, checkpoint restore |
-| `decoder.js` / `beam.js` / `infer-worker.js` | Inference for visualization and search for 5 candidate generations |
-| `live-loader.js` / `live-app.js` / `details.js` | Startup, UI, heatmaps, cell details |
+| `decoder.js` / `beam.js` / `diffuse.js` / `infer-worker.js` | Inference for visualization, search for 5 candidate generations, and diffusion sampling |
+| `live-loader.js` / `live-app.js` / `architecture.js` / `details.js` | Startup, UI, heatmaps, model descriptions and structure diagram, cell details |
 | `live-page.html` / `style.css` | HTML template and styles |
 | `corpus-common.json` | 5,000 samples with text, readings, themes, character vocabulary, tokens and split info |
 | `split-all-themes.py` | Reproduces the train/eval split covering all 14 themes |

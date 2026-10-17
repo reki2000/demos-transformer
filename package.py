@@ -8,8 +8,8 @@ for entry in json.loads((p/'datasets.json').read_text()):
     datasets.append({**{k:v for k,v in entry.items() if k!='file'},**corpus})
 blob=base64.b64encode(gzip.compress(json.dumps({'datasets':datasets},ensure_ascii=False,separators=(',',':')).encode(),compresslevel=9,mtime=0)).decode()
 loader=(p/'live-loader.js').read_text().replace("JSON.parse(document.getElementById('training-data').textContent)","JSON.parse(await new Response(new Blob([Uint8Array.from(atob(document.getElementById('training-data').textContent.trim()),c=>c.charCodeAt(0))]).stream().pipeThrough(new DecompressionStream('gzip'))).text())")
-js="(async()=>{\n"+loader+'\n'+(p/'decoder.js').read_text()+'\n'+(p/'live-app.js').read_text()+'\n'+(p/'details.js').read_text()+"\nawait initializeModel();\n})().catch(error=>{document.getElementById('status').textContent='開始できませんでした：'+error.message});"
-training=(p/'engine.js').read_text()+'\n'+(p/'train-worker.js').read_text();inference=(p/'decoder.js').read_text()+'\n'+(p/'beam.js').read_text()+'\n'+(p/'infer-worker.js').read_text()
+js="(async()=>{\n"+loader+'\n'+(p/'decoder.js').read_text()+'\n'+(p/'live-app.js').read_text()+'\n'+(p/'architecture.js').read_text()+'\n'+(p/'details.js').read_text()+"\nawait initializeModel();\n})().catch(error=>{document.getElementById('status').textContent='開始できませんでした：'+error.message});"
+training=(p/'engine.js').read_text()+'\n'+(p/'train-worker.js').read_text();inference='\n'.join((p/f).read_text() for f in ['decoder.js','beam.js','diffuse.js','infer-worker.js'])
 for code in [training,inference,js]:assert '</script' not in code.lower()
 h=(p/'live-page.html').read_text().replace('__CSS__',(p/'style.css').read_text()).replace('__DATA__',blob).replace('__WASM__',base64.b64encode((p/'engine.wasm').read_bytes()).decode()).replace('__TRAIN_WORKER__',training).replace('__INFER_WORKER__',inference).replace('__JS__',js)
 assert '__' not in h.replace('__proto__','')
